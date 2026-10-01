@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block heading %}My Profile{% endblock %}
+
+{% block content %}
+
+    {% if success %}<div class="success" style="background:#eafaf1; color:#27ae60; padding:10px; border-radius:6px; margin-bottom:12px;">{{ success }}</div>{% endif %}
+    {% if error %}<div class="error" style="background:#fdecea; color:#e74c3c; padding:10px; border-radius:6px; margin-bottom:12px;">{{ error }}</div>{% endif %}
+
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+
+        <!-- Cover banner strip, purely decorative, like Facebook's cover photo area -->
+        <div style="height:110px; background:linear-gradient(135deg, #2c5aa0, #1e3f73);"></div>
+
+        <div style="padding:0 32px 28px 32px;">
+            <div class="profile-header-row" style="display:flex; align-items:flex-end; gap:24px; margin-top:-55px;">
+
+                {% if user.profile_picture %}
+                    <img src="{{ url_for('static', filename='profile_pics/' + user.profile_picture) }}"
+                         alt="Profile picture"
+                         style="width:140px; height:140px; object-fit:cover; border-radius:50%; border:5px solid white; flex-shrink:0; background:white;">
+                {% else %}
+                    <div style="width:140px; height:140px; border-radius:50%; background:#eaf2fb; border:5px solid white;
+                                display:flex; align-items:center; justify-content:center; color:#2c5aa0; font-size:52px;
+                                font-weight:bold; flex-shrink:0;">
+                        {{ user.name[0]|upper }}
+                    </div>
+                {% endif %}
+
+                <div style="padding-bottom:10px;">
+                    <h2 style="margin:0; color:var(--navy); font-size:1.7rem;">{{ user.name }}</h2>
+                    <p style="margin:4px 0 0 0; color:var(--muted); font-size:14px;">
+                        {{ user.email }} &middot; <span style="color:#2563eb; font-weight:600;">{{ user.role|capitalize }}</span>
+                    </p>
+                </div>
+            </div>
+
+            <hr style="border:none; border-top:1px solid #eee; margin:24px 0;">
+
+            <form method="POST" action="{{ url_for('profile.profile') }}" enctype="multipart/form-data"
+                  style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <label style="font-size:14px; color:var(--muted); margin:0;">Upload a new profile picture:</label>
+                <input type="file" name="profile_picture" accept="image/*" style="font-size:14px;">
+                <button type="submit" style="padding:9px 18px;">Save Picture</button>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        @media (max-width: 600px) {
+            .profile-header-row {
+                flex-direction: column;
+                align-items: center !important;
+                text-align: center;
+                margin-top: -70px !important;
+            }
+        }
+    </style>
+
+{% endblock %}

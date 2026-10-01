@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Library - Sign Up</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+            background: #ffffff;
+            margin: 0;
+            padding: 60px 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .badge {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: #2563eb;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px; margin-bottom: 18px;
+        }
+
+        h2 { font-family: Georgia, 'Times New Roman', serif; color: #2563eb; font-size: 2.2rem; margin: 0 0 6px 0; text-align: center; font-weight: 700; }
+        .subtitle { color: #6b7280; font-size: 0.95rem; margin: 0 0 32px 0; text-align: center; }
+
+        .login-card {
+            background: white; width: 100%; max-width: 400px; border-radius: 12px;
+            border: 1px solid #e5e7eb; padding: 32px;
+        }
+        .login-card h3 { color: #2563eb; font-size: 1.15rem; font-weight: 700; margin: 0 0 22px 0; }
+
+        .input-row { display: flex; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
+        .input-row:focus-within { border-color: #2563eb; }
+        .input-icon { background: #fafafa; display: flex; align-items: center; justify-content: center; width: 44px; font-size: 16px; flex-shrink: 0; color: #6b7280; }
+        .input-row input { flex: 1; border: none; background: white; padding: 13px 12px; font-size: 15px; outline: none; min-width: 0; }
+
+        .toggle-password { background: white; color: #6b7280; border: none; border-left: 1px solid #d1d5db; width: 44px; cursor: pointer; font-size: 15px; flex-shrink: 0; }
+        .toggle-password:hover { background: #fafafa; }
+
+        button.login-btn {
+            width: 100%; padding: 13px; background: #2563eb; color: white; border: none;
+            border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px;
+        }
+        button.login-btn:hover { background: #1d4ed8; }
+
+        .error { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 10px; border-radius: 6px; margin-bottom: 14px; font-size: 14px; text-align: center; }
+        .success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; padding: 10px; border-radius: 6px; margin-bottom: 14px; font-size: 14px; text-align: center; }
+
+        .link { text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280; }
+        .link a { color: #2563eb; font-weight: 600; text-decoration: none; }
+        .link a:hover { text-decoration: underline; }
+
+        @media (max-width: 480px) {
+            h2 { font-size: 1.7rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="badge">📚</div>
+    <h2>Smart Library System</h2>
+    <p class="subtitle">Book Recommendation System</p>
+
+    <div class="login-card">
+        <h3>Create your account</h3>
+
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        {% if success %}<div class="success">{{ success }}</div>{% endif %}
+
+        <form method="POST" action="{{ url_for('auth.signup') }}">
+            <div class="input-row">
+                <div class="input-icon">👤</div>
+                <input type="text" name="name" placeholder="Full Name" required>
+            </div>
+
+            <div class="input-row">
+                <div class="input-icon">📧</div>
+                <input type="email" name="email" placeholder="Enter Email" required>
+            </div>
+
+            <div class="input-row">
+                <div class="input-icon">🔑</div>
+                <input type="password" name="password" id="password-field" placeholder="Enter Password (min 6 characters)" required>
+                <button type="button" class="toggle-password" id="toggle-btn" onclick="togglePassword()">👁</button>
+            </div>
+            <div id="strength-meter" style="font-size:13px; margin:-8px 0 14px 4px; min-height:18px;"></div>
+
+            <button type="submit" class="login-btn">Sign Up</button>
+        </form>
+
+        <div class="link">Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a></div>
+    </div>
+
+<script>
+function togglePassword() {
+    const field = document.getElementById('password-field');
+    const btn = document.getElementById('toggle-btn');
+    if (field.type === 'password') { field.type = 'text'; btn.textContent = '🙈'; }
+    else { field.type = 'password'; btn.textContent = '👁'; }
+}
+
+// ============================================================
+// DOM MANIPULATION: live password strength feedback.
+// Reads the input's value on every keystroke and directly updates
+// the text content + color of a separate element — no page reload,
+// no server round-trip, purely client-side DOM updates.
+// ============================================================
+const passwordField = document.getElementById('password-field');
+const meter = document.getElementById('strength-meter');
+
+passwordField.addEventListener('input', () => {
+    const value = passwordField.value;
+
+    if (value.length === 0) {
+        meter.textContent = '';
+        return;
+    }
+
+    let strength = 'Weak';
+    let color = '#e74c3c';
+
+    if (value.length >= 6) {
+        const hasLetter = /[a-zA-Z]/.test(value);
+        const hasNumber = /[0-9]/.test(value);
+        const hasSpecial = /[^a-zA-Z0-9]/.test(value);
+        const varietyCount = [hasLetter, hasNumber, hasSpecial].filter(Boolean).length;
+
+        if (value.length >= 10 && varietyCount >= 2) {
+            strength = 'Strong';
+            color = '#27ae60';
+        } else if (value.length >= 6) {
+            strength = 'Okay';
+            color = '#e67e22';
+        }
+    } else {
+        strength = 'Too short (min 6 characters)';
+    }
+
+    // Directly manipulating the DOM: updating text and inline style
+    meter.textContent = `Password strength: ${strength}`;
+    meter.style.color = color;
+    meter.style.fontWeight = '600';
+});
+</script>
+
+</body>
+</html>

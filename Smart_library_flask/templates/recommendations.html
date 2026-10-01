@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Recommended for You{% endblock %}
+{% block heading %}✨ Recommended for You{% endblock %}
+
+{% block content %}
+
+    {% if not recommendations %}
+        <div class="empty-state">
+            No recommendations yet — borrow or rate a few books first, and this page will start
+            suggesting titles based on your genres and what similar readers enjoyed.
+        </div>
+    {% else %}
+        <div class="catalog" id="recommendations-list" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+            {% for book in recommendations %}
+                <div class="book-card" id="rec-card-{{ book.id }}" style="display:flex; flex-direction:column; min-height:200px;">
+                    <div style="display:flex; gap:12px;">
+                        {% if book.cover_image %}
+                            <img src="{{ url_for('static', filename='covers/' + book.cover_image) }}"
+                                 alt="{{ book.title }} cover"
+                                 style="width:52px; height:70px; object-fit:cover; border-radius:6px; flex-shrink:0;">
+                        {% else %}
+                            <div style="width:52px; height:70px; background:#eff6ff; border-radius:6px; flex-shrink:0;
+                                        display:flex; align-items:center; justify-content:center; color:#93c5fd; font-size:20px;">
+                                📖
+                            </div>
+                        {% endif %}
+                        <div style="min-width:0;">
+                            <h3 style="font-size:1rem;">{{ book.title }}</h3>
+                            <p style="margin:0 0 6px 0; color:#64748b; font-size:13px;">{{ book.author }}</p>
+                            <span class="genre-tag">{{ book.genre }}</span>
+                            {% if book.match_score is defined %}
+                                <span class="genre-tag" style="background:#2563eb; color:white; border-color:#2563eb; margin-left:4px;">
+                                    {{ book.match_score }}% match
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p style="font-size:13px; color:#64748b; flex-grow:1;">{{ book.description }}</p>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                        <p class="availability {{ '' if book.available_copies > 0 else 'unavailable' }}" style="margin:0;">
+                            {% if book.available_copies > 0 %}
+                                {{ book.available_copies }} available
+                            {% else %}
+                                Unavailable
+                            {% endif %}
+                        </p>
+                        <button class="rec-borrow-btn" data-book-id="{{ book.id }}"
+                                {{ '' if book.available_copies > 0 else 'disabled' }}>
+                            Borrow
+                        </button>
+                    </div>
+                    <span class="rec-borrow-msg" id="rec-borrow-msg-{{ book.id }}" style="font-size:12px; text-align:right;"></span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+<script>
+async function postForm(url, data) {
+    const formData = new URLSearchParams(data);
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    });
+    return response.json();
+}
+
+document.querySelectorAll('.rec-borrow-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const bookId = btn.dataset.bookId;
+        const msgEl = document.getElementById(`rec-borrow-msg-${bookId}`);
+        btn.disabled = true;
+        msgEl.textContent = 'Borrowing...';
+
+        try {
+            const result = await postForm("{{ url_for('books.borrow') }}", { book_id: bookId });
+
+            if (result.success) {
+                // Once borrowed, this book no longer belongs on the recommendations page —
+                // fade it out and remove the card entirely.
+                const card = document.getElementById(`rec-card-${bookId}`);
+                msgEl.textContent = '✓ Borrowed!';
+                msgEl.style.color = '#27ae60';
+                card.style.transition = 'opacity 0.4s';
+                card.style.opacity = '0';
+                setTimeout(() => {
+                    card.remove();
+                    // If that was the last recommendation, show the empty state message
+                    const list = document.getElementById('recommendations-list');
+                    if (list && list.children.length === 0) {
+                        list.outerHTML = `<div class="empty-state">
+                            No more recommendations right now — check back after borrowing or
+                            rating a few more books.
+                        </div>`;
+                    }
+                }, 400);
+            } else {
+                msgEl.textContent = result.message;
+                msgEl.style.color = '#e74c3c';
+                btn.disabled = false;
+            }
+        } catch (err) {
+            msgEl.textContent = 'Something went wrong.';
+            msgEl.style.color = '#e74c3c';
+            btn.disabled = false;
+        }
+    });
+});
+</script>
+
+{% endblock %}

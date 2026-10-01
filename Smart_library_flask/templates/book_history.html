@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book.title }} - History</title>
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');</script>
+    <style>
+        :root { --blue:#2563eb; --blue-dark:#1d4ed8; --navy:#1e293b; --border:#e5e7eb; --muted:#64748b; --bg:#f8fafc; --card:#ffffff; }
+        html[data-theme="dark"] { --navy:#e2e8f0; --border:#334155; --muted:#94a3b8; --bg:#0f172a; --card:#1e293b; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 28px; background: var(--bg); color: var(--navy); }
+        h1 { color: var(--navy); font-size: 1.4rem; margin: 0 0 4px 0; }
+        h2 { color: #2563eb; font-size: 1.05rem; margin-top: 28px; }
+        .admin-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+                     background: var(--card); padding: 12px 20px; border-radius: 10px; border: 1px solid var(--border); }
+        .back-link { color: #2563eb; text-decoration: none; font-size: 14px; }
+        .summary-box { background: var(--card); padding: 16px 20px; border-radius: 10px; border: 1px solid var(--border); margin-top: 10px; }
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; }
+        table { width: 100%; min-width: 420px; border-collapse: collapse; background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        th { background: var(--bg); color: var(--navy); font-weight: 700; }
+        .status-borrowed { color: #2563eb; font-weight: bold; }
+        .status-returned { color: #27ae60; }
+        .status-overdue { color: #e74c3c; font-weight: bold; }
+        .empty-state { background: var(--card); padding: 16px 20px; border-radius: 10px; color: var(--muted); margin-top: 10px; }
+        .stars { color: #e67e22; }
+        @media (max-width: 700px) {
+            body { padding: 14px; }
+            .admin-nav { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-nav">
+        <div>
+            <h1>{{ book.title }}</h1>
+            <span style="color: var(--muted); font-size:13px;">by {{ book.author }} &middot; {{ book.genre }}</span>
+        </div>
+        <a class="back-link" href="{{ url_for('admin.books_history_overview') }}">← Back to Book History</a>
+    </div>
+
+    <div class="summary-box">
+        <strong>Copies:</strong> {{ book.available_copies }} / {{ book.total_copies }} available
+        &nbsp;|&nbsp;
+        <strong>Average Rating:</strong>
+        {% if rating_summary.rating_count %}
+            <span class="stars">{{ "%.1f"|format(rating_summary.avg_rating) }} ★</span> ({{ rating_summary.rating_count }} rating(s))
+        {% else %}
+            No ratings yet
+        {% endif %}
+        &nbsp;|&nbsp;
+        <strong>Total times borrowed:</strong> {{ borrow_history|length }}
+    </div>
+
+    <h2>Borrow History</h2>
+    {% if not borrow_history %}
+        <div class="empty-state">No one has borrowed this book yet.</div>
+    {% else %}
+        <div class="table-wrap">
+        <table>
+            <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Borrowed</th>
+                <th>Due</th>
+                <th>Returned</th>
+                <th>Status</th>
+            </tr>
+            {% for record in borrow_history %}
+                <tr>
+                    <td>{{ record.user_name }}</td>
+                    <td>{{ record.user_email }}</td>
+                    <td>{{ record.borrow_date }}</td>
+                    <td>{{ record.due_date }}</td>
+                    <td>{{ record.return_date if record.return_date else '—' }}</td>
+                    <td class="status-{{ record.status }}">{{ record.status|capitalize }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+        </div>
+    {% endif %}
+
+    <h2>Ratings</h2>
+    {% if not rating_list %}
+        <div class="empty-state">No ratings submitted for this book yet.</div>
+    {% else %}
+        <div class="table-wrap">
+        <table>
+            <tr>
+                <th>User</th>
+                <th>Rating</th>
+                <th>Date</th>
+            </tr>
+            {% for r in rating_list %}
+                <tr>
+                    <td>{{ r.user_name }}</td>
+                    <td class="stars">{{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}</td>
+                    <td>{{ r.created_at }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+        </div>
+    {% endif %}
+
+    <button type="button" id="theme-toggle" title="Toggle dark mode"
+            style="position:fixed; bottom:16px; right:16px; z-index:50; width:44px; height:44px; border-radius:50%; margin:0; padding:0;
+                   background:var(--card); border:1px solid var(--border); color:var(--navy); font-size:18px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15);">🌙</button>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('theme-toggle');
+            const icon = () => document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+            btn.textContent = icon();
+            btn.addEventListener('click', () => {
+                const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+                btn.textContent = icon();
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}My Borrow History{% endblock %}
+{% block heading %}My Borrow History{% endblock %}
+
+{% block content %}
+
+    {% if not history %}
+        <div class="empty-state">You haven't borrowed any books yet.</div>
+    {% else %}
+        <div class="table-wrap">
+        <table>
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Borrowed</th>
+                <th>Due</th>
+                <th>Status</th>
+                <th></th>
+                <th>Your Rating</th>
+            </tr>
+            {% for record in history %}
+                <tr>
+                    <td>{{ record.title }}</td>
+                    <td>{{ record.author }}</td>
+                    <td>{{ record.borrow_date }}</td>
+                    <td>
+                        {% if record.status == 'overdue' or (record.status == 'borrowed' and record.days_until_due < 0) %}
+                            <span style="color:#e74c3c; font-weight:bold;">{{ record.due_date }} (overdue)</span>
+                        {% elif record.status == 'borrowed' and record.days_until_due <= 2 %}
+                            <span style="color:#e67e22; font-weight:bold;">{{ record.due_date }} (due soon)</span>
+                        {% else %}
+                            {{ record.due_date }}
+                        {% endif %}
+                    </td>
+                    <td class="status-{{ record.status }}"
+                        {% if record.status == 'overdue' %}style="color:#e74c3c; font-weight:bold;"{% endif %}>
+                        {{ record.status|capitalize }}
+                    </td>
+                    <td>
+                        {% if record.status in ['borrowed', 'overdue'] %}
+                            <form method="POST" action="{{ url_for('books.return_book') }}">
+                                <input type="hidden" name="borrow_id" value="{{ record.id }}">
+                                <button type="submit">Return</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.status == 'returned' %}
+                            <select class="rate-select" data-book-id="{{ record.book_id }}">
+                                <option value="">-- rate --</option>
+                                {% for i in range(1, 6) %}
+                                    <option value="{{ i }}" {{ 'selected' if my_ratings.get(record.book_id) == i else '' }}>
+                                        {{ '⭐' * i }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <span class="rate-msg" id="rate-msg-{{ record.book_id }}" style="font-size:12px; margin-left:4px;"></span>
+                        {% else %}
+                            <span style="color:var(--muted); font-size:13px;">Rate after returning</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        </div>
+    {% endif %}
+
+<script>
+async function postForm(url, data) {
+    const formData = new URLSearchParams(data);
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    });
+    return response.json();
+}
+
+document.querySelectorAll('.rate-select').forEach(select => {
+    select.addEventListener('change', async () => {
+        const bookId = select.dataset.bookId;
+        const rating = select.value;
+        const msgEl = document.getElementById(`rate-msg-${bookId}`);
+        if (!rating) return;
+
+        try {
+            const result = await postForm("{{ url_for('books.rate') }}", { book_id: bookId, rating: rating });
+            if (result.success) {
+                msgEl.textContent = '✓ Saved';
+                msgEl.style.color = '#27ae60';
+            } else {
+                msgEl.textContent = 'Failed to save';
+                msgEl.style.color = '#e74c3c';
+            }
+        } catch (err) {
+            msgEl.textContent = 'Something went wrong.';
+            msgEl.style.color = '#e74c3c';
+        }
+
+        setTimeout(() => { msgEl.textContent = ''; }, 2000);
+    });
+});
+</script>
+
+{% endblock %}

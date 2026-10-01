@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Admin</title>
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');</script>
+    <style>
+        :root { --blue:#2563eb; --blue-dark:#1d4ed8; --navy:#1e293b; --border:#e5e7eb; --muted:#64748b; --bg:#f8fafc; --card:#ffffff; }
+        html[data-theme="dark"] { --navy:#e2e8f0; --border:#334155; --muted:#94a3b8; --bg:#0f172a; --card:#1e293b; }
+        html[data-theme="dark"] { --navy: #e2e8f0; --border: #334155; --muted: #94a3b8; --bg: #0f172a; --card: #1e293b; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, 'Segoe UI', Arial, sans-serif; margin: 0; padding: 28px; background: var(--bg); color: var(--navy); transition: background .15s, color .15s; }
+        h1 { color: var(--navy); font-size: 1.5rem; margin: 0; }
+        .admin-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+                     background: var(--card); border: 1px solid var(--border); padding: 12px 20px; border-radius: 10px; }
+        .brand-badge { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                       display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        button { padding: 9px 18px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        button:hover { background: #1d4ed8; }
+        @media (max-width: 700px) {
+            body { padding: 14px; }
+            .admin-nav { flex-direction: column; align-items: flex-start; }
+            .profile-header-row { flex-direction: column; align-items: center !important; text-align: center; margin-top: -70px !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-nav">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <div class="brand-badge">📚</div>
+            <h1>Admin Panel</h1>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+            <a href="{{ url_for('admin.admin_books') }}" style="color:var(--blue); text-decoration:none; margin-left:6px;">← Back to Admin Panel</a>
+            &nbsp;|&nbsp; <a href="{{ url_for('auth.logout') }}" style="color:#dc2626; text-decoration:none;">Log out</a>
+        </div>
+    </div>
+
+    {% if success %}<div style="background:#f0fdf4; border:1px solid #bbf7d0; color:#16a34a; padding:10px; border-radius:6px; margin-bottom:12px;">{{ success }}</div>{% endif %}
+    {% if error %}<div style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:10px; border-radius:6px; margin-bottom:12px;">{{ error }}</div>{% endif %}
+
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+        <div style="height:110px; background:linear-gradient(135deg, #2563eb, #1d4ed8);"></div>
+
+        <div style="padding:0 32px 28px 32px;">
+            <div class="profile-header-row" style="display:flex; align-items:flex-end; gap:24px; margin-top:-55px;">
+
+                {% if user.profile_picture %}
+                    <img src="{{ url_for('static', filename='profile_pics/' + user.profile_picture) }}"
+                         alt="Profile picture"
+                         style="width:140px; height:140px; object-fit:cover; border-radius:50%; border:5px solid var(--card); flex-shrink:0; background:var(--card);">
+                {% else %}
+                    <div style="width:140px; height:140px; border-radius:50%; background:#eaf2fb; border:5px solid var(--card);
+                                display:flex; align-items:center; justify-content:center; color:#2563eb; font-size:52px;
+                                font-weight:bold; flex-shrink:0;">
+                        {{ user.name[0]|upper }}
+                    </div>
+                {% endif %}
+
+                <div style="padding-bottom:10px;">
+                    <h2 style="margin:0; color:var(--navy); font-size:1.7rem;">{{ user.name }}</h2>
+                    <p style="margin:4px 0 0 0; color:var(--muted); font-size:14px;">
+                        {{ user.email }} &middot; <span style="color:#2563eb; font-weight:600;">{{ user.role|capitalize }}</span>
+                    </p>
+                </div>
+            </div>
+
+            <hr style="border:none; border-top:1px solid var(--border); margin:24px 0;">
+
+            <form method="POST" action="{{ url_for('profile.profile') }}" enctype="multipart/form-data"
+                  style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <label style="font-size:14px; color:var(--muted); margin:0;">Upload a new profile picture:</label>
+                <input type="file" name="profile_picture" accept="image/*" style="font-size:14px; color:var(--navy);">
+                <button type="submit">Save Picture</button>
+            </form>
+        </div>
+    </div>
+
+    <button type="button" id="theme-toggle" title="Toggle dark mode"
+            style="position:fixed; bottom:16px; right:16px; z-index:50; width:44px; height:44px; border-radius:50%; margin:0; padding:0;
+                   background:var(--card); border:1px solid var(--border); color:var(--navy); font-size:18px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15);">🌙</button>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('theme-toggle');
+            const icon = () => document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+            btn.textContent = icon();
+            btn.addEventListener('click', () => {
+                const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+                btn.textContent = icon();
+            });
+        });
+    </script>
+</body>
+</html>

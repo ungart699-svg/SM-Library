@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Catalog{% endblock %}
+{% block heading %}Catalog{% endblock %}
+
+{% block content %}
+
+    <div style="margin-bottom: 14px;">
+        <input type="text" id="live-filter" placeholder="⚡ Instant filter (no reload) — type to filter what's showing below..."
+               style="width:100%; max-width:500px; padding:10px 14px; border:1px solid #ddd; border-radius:6px; font-size:16px; background:#fffbe6;">
+        <span id="live-filter-count" style="font-size:13px; color:var(--muted); margin-left:8px;"></span>
+    </div>
+
+    <form method="GET" action="{{ url_for('books.books') }}" class="search-bar">
+        <input type="text" name="search" placeholder="Search by title, author, or genre..." value="{{ search }}">
+        <button type="submit">Search</button>
+        {% if search %}
+            <a href="{{ url_for('books.books') }}" style="align-self:center; color:var(--muted); font-size:13px;">Clear</a>
+        {% endif %}
+    </form>
+
+    {% if search %}
+        <p style="color: var(--muted); font-size: 14px;">{{ total_count }} result(s) for "{{ search }}"</p>
+    {% endif %}
+
+    {% if not books %}
+        <div class="no-results">No books matched your search. Try a different title, author, or genre.</div>
+    {% else %}
+    <div class="catalog" id="catalog-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+        {% for book in books %}
+            <div class="book-card" id="book-card-{{ book.id }}" style="display:flex; flex-direction:column; min-height:200px;"
+                 data-title="{{ book.title|lower }}" data-author="{{ book.author|lower }}" data-genre="{{ book.genre|lower }}">
+                <div style="display:flex; gap:12px;">
+                    {% if book.cover_image %}
+                        <img src="{{ url_for('static', filename='covers/' + book.cover_image) }}"
+                             alt="{{ book.title }} cover"
+                             style="width:52px; height:70px; object-fit:cover; border-radius:6px; flex-shrink:0;">
+                    {% else %}
+                        <div style="width:52px; height:70px; background:#eff6ff; border-radius:6px; flex-shrink:0;
+                                    display:flex; align-items:center; justify-content:center; color:#93c5fd; font-size:20px;">
+                            📖
+                        </div>
+                    {% endif %}
+                    <div style="min-width:0;">
+                        <h3 style="font-size:1rem;">{{ book.title }}</h3>
+                        <p style="margin:0 0 6px 0; color:#64748b; font-size:13px;">{{ book.author }}</p>
+                        <span class="genre-tag">{{ book.genre }}</span>
+                    </div>
+                </div>
+                <p style="font-size:13px; color:#64748b; flex-grow:1;">{{ book.description }}</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                    <p class="availability {{ '' if book.available_copies > 0 else 'unavailable' }}"
+                       id="availability-{{ book.id }}" style="margin:0;">
+                        {% if book.available_copies > 0 %}
+                            {{ book.available_copies }} available
+                        {% else %}
+                            Unavailable
+                        {% endif %}
+                    </p>
+                    <button class="borrow-btn" data-book-id="{{ book.id }}"
+                            {{ '' if book.available_copies > 0 else 'disabled' }}>
+                        Borrow
+                    </button>
+                </div>
+                <span class="borrow-msg" id="borrow-msg-{{ book.id }}" style="font-size:12px; text-align:right;"></span>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if total_pages and total_pages > 1 %}
+        <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-top:24px; flex-wrap:wrap;">
+            {% if page > 1 %}
+                <a href="{{ url_for('books.books', page=page-1, search=search) }}"
+                   style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:var(--card); border:1px solid var(--border); color:var(--navy); border-radius:6px; text-decoration:none; font-size:14px;">←</a>
+            {% endif %}
+            {% for p in range(1, total_pages + 1) %}
+                <a href="{{ url_for('books.books', page=p, search=search) }}"
+                   style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:6px; text-decoration:none; font-size:14px;
+                          {{ 'background:#2563eb; color:white;' if p == page else 'background:var(--card); border:1px solid var(--border); color:var(--navy);' }}">{{ p }}</a>
+            {% endfor %}
+            {% if page < total_pages %}
+                <a href="{{ url_for('books.books', page=page+1, search=search) }}"
+                   style="width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:var(--card); border:1px solid var(--border); color:var(--navy); border-radius:6px; text-decoration:none; font-size:14px;">→</a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+<script>
+// ============================================================
+// DOM MANIPULATION: live client-side filtering.
+// This does NOT talk to the server at all — it directly reads
+// and modifies the DOM (hiding/showing elements) as the user types.
+// ============================================================
+const filterInput = document.getElementById('live-filter');
+const countLabel = document.getElementById('live-filter-count');
+
+if (filterInput) {
+    filterInput.addEventListener('input', () => {
+        const query = filterInput.value.trim().toLowerCase();
+        // querySelectorAll + forEach is DOM traversal; .style.display is direct DOM manipulation
+        const cards = document.querySelectorAll('#catalog-grid .book-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const title = card.dataset.title || '';
+            const author = card.dataset.author || '';
+            const genre = card.dataset.genre || '';
+            const matches = query === '' || title.includes(query) || author.includes(query) || genre.includes(query);
+
+            // Directly manipulating the DOM element's style — no page reload, no server call
+            card.style.display = matches ? '' : 'none';
+            if (matches) visibleCount++;
+        });
+
+        countLabel.textContent = query === '' ? '' : `Showing ${visibleCount} of ${cards.length}`;
+    });
+}
+
+// Helper: reads the CSRF-free fetch with the header Flask checks for AJAX detection
+async function postForm(url, data) {
+    const formData = new URLSearchParams(data);
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'   // tells Flask this is AJAX, not a form submit
+        },
+        body: formData
+    });
+    return response.json();
+}
+
+// Borrow button handling
+document.querySelectorAll('.borrow-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const bookId = btn.dataset.bookId;
+        const msgEl = document.getElementById(`borrow-msg-${bookId}`);
+        btn.disabled = true;
+        msgEl.textContent = 'Borrowing...';
+
+        try {
+            const result = await postForm("{{ url_for('books.borrow') }}", { book_id: bookId });
+
+            if (result.success) {
+                document.getElementById(`availability-${bookId}`).textContent =
+                    result.available_copies > 0 ? `${result.available_copies} copies available` : 'Currently unavailable';
+                msgEl.textContent = '✓ Borrowed!';
+                msgEl.style.color = '#27ae60';
+                if (result.available_copies <= 0) btn.disabled = true;
+            } else {
+                msgEl.textContent = result.message;
+                msgEl.style.color = '#e74c3c';
+                btn.disabled = false;
+            }
+        } catch (err) {
+            msgEl.textContent = 'Something went wrong.';
+            msgEl.style.color = '#e74c3c';
+            btn.disabled = false;
+        }
+
+        setTimeout(() => { msgEl.textContent = ''; }, 3000);
+    });
+});
+</script>
+
+{% endblock %}
